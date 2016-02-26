@@ -92,7 +92,7 @@ def V(m, y, p_transition, p_emission, x, c={}):
 def inference(x, p_transition, p_emission):
     tagged_x = wrap_s_tag(x)
     m = len(wrap_s_tag(x)) - 1
-    return V(m, '</s>', p_transition, p_emission, tagged_x)
+    return V(m, '</s>', p_transition, p_emission, tagged_x, c={})
 
 def accuracy(y, y_hat):
     n = 0
