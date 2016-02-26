@@ -4,12 +4,12 @@ def wrap_s_tag(y):
     return ['<s>'] + y + ['</s>']
 
 def estimate_transition(ys):
-    context = None
     bigram_count = {}
     n_bigram = 0
     unigram_count = {}
     n_unigram = 0
     for y in ys:
+        context = None
         for t in wrap_s_tag(y):
             if t not in unigram_count:
                 unigram_count[t] = 0
