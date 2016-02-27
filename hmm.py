@@ -1,5 +1,10 @@
 import numpy as np
 
+# using special tags
+# - <s> for start of sentence
+# - </s> for end of sentence
+# - <oov> for out of vocabulary words
+
 def wrap_s_tag(y):
     return ['<s>'] + y + ['</s>']
 
@@ -33,7 +38,7 @@ def estimate_transition(ys):
 
     return p_transition
 
-def estimate_emission(ys, xs):
+def estimate_emission(ys, xs, smoothing=None):
     p_emission = {}
     tag_count = {}
     for y, x in zip(ys, xs):
@@ -46,9 +51,14 @@ def estimate_emission(ys, xs):
             if tag not in tag_count:
                 tag_count[tag] = 0
             tag_count[tag] += 1
-    for tag in p_emission:
-        for token in p_emission[tag]:
-            p_emission[tag][token] *= 1. / tag_count[tag]
+
+    if smoothing == None:
+        for tag in p_emission:
+            p_emission[tag]['<oov>'] = 0.
+            for token in p_emission[tag]:
+                p_emission[tag][token] *= 1. / tag_count[tag]
+    else:
+        smoothing(p_emission)
     return p_emission
 
 def sample_discrete(distribution):
@@ -70,7 +80,7 @@ def sample(p_transition, p_emission):
         x.append(x_prev)
     return y, x
 
-def V(m, y, p_transition, p_emission, x, c={}):
+def V(m, y, p_transition, p_emission, x, c):
     if (m, y) in c:
         return c[m, y]
     if m == 0:
@@ -80,9 +90,13 @@ def V(m, y, p_transition, p_emission, x, c={}):
     v_max = 0.
     yhat_max = []
     for yp in p_transition:
-        if y in p_transition[yp] and x[m] in p_emission[y]:
+        if y in p_transition[yp]:
+            if x[m] in p_emission[y]:
+                p_xm = p_emission[y][x[m]]
+            else:
+                p_xm = p_emission[y]['<oov>']
             p, yhat = V(m-1, yp, p_transition, p_emission, x, c)
-            v = p * p_transition[yp][y] * p_emission[y][x[m]]
+            v = p * p_transition[yp][y] * p_xm
             if v_max < v:
                 v_max = v
                 yhat_max = yhat
@@ -109,3 +123,14 @@ def evaluate(xs, p_transition, p_emission, ys):
         n += 1
         total_acc += accuracy(y, yhat)
     return total_acc / n
+
+def add_k_smooth(k, counts):
+    for t in counts:
+        n = 0
+        counts[t]['<oov>'] = 0
+        for w in counts[t]:
+            counts[t][w] += k
+            n += counts[t][w]
+        for w in counts[t]:
+            counts[t][w] *= 1. / n
+    return counts
